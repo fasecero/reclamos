@@ -4,6 +4,7 @@
 # Except these files:
 !.gitignore
 !mi_programa.py
+!.github/
 
 # Optional: Whitelist a folder if needed (e.g., assets)
 # !assets/
