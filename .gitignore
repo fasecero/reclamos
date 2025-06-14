@@ -1,0 +1,9 @@
+# Ignore EVERYTHING by default
+*
+
+# Except these files:
+!.gitignore
+!mi_programa.py
+
+# Optional: Whitelist a folder if needed (e.g., assets)
+# !assets/
