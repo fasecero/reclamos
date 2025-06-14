@@ -1,0 +1,21 @@
+name: Build Windows EXE
+on: [push]  # Runs on every `git push`
+
+jobs:
+  build:
+    runs-on: windows-latest  # Uses a Windows VM in the cloud
+    steps:
+      - uses: actions/checkout@v4  # Check out your code
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'  # Match your app's Python version
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+      - name: Build EXE
+        run: pyinstaller --onefile --windowed --name reclamos mi_programa.py
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: reclamos-Windows
+          path: dist/reclamos.exe  # Path to the built .exe
