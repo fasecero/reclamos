@@ -17,14 +17,7 @@ jobs:
           pip install pyinstaller
       - name: Build EXE
         run: |
-          pyinstaller \
-            --onefile \
-            --windowed \
-            --name reclamos \
-            --hidden-import pandas \
-            --hidden-import tkcalendar \
-            --clean \
-            mi_programa.py
+          pyinstaller --onefile --windowed --name reclamos --hidden-import pandas --hidden-import tkcalendar --clean mi_programa.py
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
