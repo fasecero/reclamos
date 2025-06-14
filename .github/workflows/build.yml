@@ -15,7 +15,7 @@ jobs:
       - name: Build EXE
         run: pyinstaller --onefile --windowed --name reclamos mi_programa.py
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: reclamos-Windows
           path: dist/reclamos.exe  # Path to the built .exe
