@@ -19,13 +19,28 @@ class AutocompleteEntry(tk.Entry):
         self.frame = None
         self.on_select_callback = on_select_callback
         self.bind('<KeyRelease>', self.check_key)
-        self.bind('<Down>', self.focus_listbox)
-        #self.bind('<FocusIn>', self.show_listbox)
+        self.bind('<Button-1>', self.on_entry_click)  # Show listbox on click
+
+    def on_entry_click(self, event):
+        value = self.get()
+        if value == '':
+            self.show_listbox(self.completion_list)
+        else:
+            matches = [item for item in self.completion_list if value.lower() in item.lower()]
+            if matches:
+                self.show_listbox(matches)
+            else:
+                self.hide_listbox()
 
     def check_key(self, event):
+        #print(f"Key pressed: {event.keysym}")  # Debugging line to check key presses
         if event.keysym in ('Down', 'Tab'):
             if self.listbox:
                 self.focus_listbox(event)
+            return
+        if event.keysym == 'Escape':
+            if self.listbox:
+                self.hide_listbox()
             return
         value = self.get()
         if value == '':
@@ -61,6 +76,19 @@ class AutocompleteEntry(tk.Entry):
         self.listbox.bind('<FocusOut>', lambda e: self.hide_listbox())
         self.listbox.bind('<Up>', self.navigate_listbox)
         self.listbox.bind('<Down>', self.navigate_listbox)
+        self.listbox.bind('<Escape>', lambda e: self.hide_listbox())
+        self.listbox.after(10, self._bind_click_outside)
+
+
+    def _bind_click_outside(self):
+        self.listbox.bind_all("<Button-1>", self._on_click_outside, add="+")
+
+    def _on_click_outside(self, event):
+        widget = event.widget
+        # If the click is not on the listbox or its frame, hide the listbox
+        if widget not in (self.listbox, self.frame) and not str(widget).startswith(str(self.frame)):
+            self.hide_listbox()
+            #self.listbox.unbind_all("<Button-1>")
 
     def focus_listbox(self, event=None):
         if self.listbox and self.listbox.size() > 0:
@@ -78,12 +106,21 @@ class AutocompleteEntry(tk.Entry):
         else:
             idx = cur[0]
             if event.keysym == 'Up':
-                idx = max(0, idx - 1)
+                if idx > 0:
+                    idx -= 1
+                else:
+                    # Scroll up if at the first visible item
+                    self.listbox.yview_scroll(-1, "units")
             elif event.keysym == 'Down':
-                idx = min(self.listbox.size() - 1, idx + 1)
+                if idx < self.listbox.size() - 1:
+                    idx += 1
+                else:
+                    # Scroll down if at the last visible item
+                    self.listbox.yview_scroll(1, "units")
         self.listbox.selection_clear(0, tk.END)
         self.listbox.selection_set(idx)
         self.listbox.activate(idx)
+        self.listbox.see(idx)
         return "break"
 
     def hide_listbox(self):
@@ -531,7 +568,7 @@ mainframe.columnconfigure(1, weight=1)
 mainframe.rowconfigure(4, weight=1)
 
 combo_motivo.focus()
-root.bind("<Return>", generar_respuesta)
+root.bind("<Return>", lambda e: generar_respuesta())
 
 # Ejecutar la aplicación
 try:
