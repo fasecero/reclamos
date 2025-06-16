@@ -9,7 +9,101 @@ from datetime import datetime  # Import datetime for timestamp
 
 combo_width_limit = 100
 entry_width_limit = 75  # Define the maximum width limit for the Entry widget
+    
+class AutocompleteEntry(tk.Entry):
+    def __init__(self, master, completion_list, on_select_callback, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+        self.completion_list = completion_list
+        self.listbox = None
+        self.scrollbar = None
+        self.frame = None
+        self.on_select_callback = on_select_callback
+        self.bind('<KeyRelease>', self.check_key)
+        self.bind('<Down>', self.focus_listbox)
+        #self.bind('<FocusIn>', self.show_listbox)
 
+    def check_key(self, event):
+        if event.keysym in ('Down', 'Tab'):
+            if self.listbox:
+                self.focus_listbox(event)
+            return
+        value = self.get()
+        if value == '':
+            self.show_listbox(self.completion_list)
+            return
+        matches = [item for item in self.completion_list if value.lower() in item.lower()]
+        if matches:
+            self.show_listbox(matches)
+        else:
+            self.hide_listbox()
+
+    def show_listbox(self, matches):
+        if self.listbox:
+            self.listbox.destroy()
+            self.scrollbar.destroy()
+            self.frame.destroy()
+        self.frame = tk.Frame(self.master)
+        self.frame.place(x=self.winfo_x(), y=self.winfo_y() + self.winfo_height())
+        self.scrollbar = tk.Scrollbar(self.frame, orient=tk.VERTICAL)
+        self.listbox = tk.Listbox(
+            self.frame,
+            yscrollcommand=self.scrollbar.set,
+            height=min(15, len(matches)),
+            width=int(self.winfo_width() * 0.12)
+        )
+        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH)
+        self.scrollbar.config(command=self.listbox.yview)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        for match in matches:
+            self.listbox.insert(tk.END, match)
+        self.listbox.bind("<<ListboxSelect>>", self.on_select)
+        self.listbox.bind('<Return>', self.on_select)
+        self.listbox.bind('<FocusOut>', lambda e: self.hide_listbox())
+        self.listbox.bind('<Up>', self.navigate_listbox)
+        self.listbox.bind('<Down>', self.navigate_listbox)
+
+    def focus_listbox(self, event=None):
+        if self.listbox and self.listbox.size() > 0:
+            self.listbox.focus_set()
+            self.listbox.selection_clear(0, tk.END)
+            self.listbox.selection_set(0)
+            self.listbox.activate(0)
+
+    def navigate_listbox(self, event):
+        if not self.listbox:
+            return
+        cur = self.listbox.curselection()
+        if not cur:
+            idx = 0
+        else:
+            idx = cur[0]
+            if event.keysym == 'Up':
+                idx = max(0, idx - 1)
+            elif event.keysym == 'Down':
+                idx = min(self.listbox.size() - 1, idx + 1)
+        self.listbox.selection_clear(0, tk.END)
+        self.listbox.selection_set(idx)
+        self.listbox.activate(idx)
+        return "break"
+
+    def hide_listbox(self):
+        if hasattr(self, 'scrollbar') and self.scrollbar:
+            self.scrollbar.destroy()
+            self.scrollbar = None
+        if hasattr(self, 'listbox') and self.listbox:
+            self.listbox.destroy()
+            self.listbox = None
+        if hasattr(self, 'frame') and self.frame:
+            self.frame.destroy()
+            self.frame = None
+
+    def on_select(self, event):
+        if self.listbox:
+            selection = self.listbox.get(self.listbox.curselection())
+            self.delete(0, tk.END)
+            self.insert(0, selection)
+            self.hide_listbox()
+            self.on_select_callback(selection)  # Call the callback function with the selected value
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 # Funciones para eventos de UI
@@ -139,6 +233,11 @@ def open_month_picker(button_name):
 # Función para actualizar los temas según el motivo seleccionado
 def actualizar_temas(event):
     motivo_seleccionado = combo_motivo.get()
+    combo_tema["values"] = list(motivos[motivo_seleccionado].keys())
+    combo_tema.current(0)  # Seleccionar el primer tema por defecto
+
+def actualizar_temas2(motivo_seleccionado):
+    #motivo_seleccionado = combo_motivo.listbox.get(combo_motivo.listbox.curselection())
     combo_tema["values"] = list(motivos[motivo_seleccionado].keys())
     combo_tema.current(0)  # Seleccionar el primer tema por defecto
 
@@ -387,10 +486,13 @@ mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
 
 # Etiqueta y lista desplegable para Motivo
 ttk.Label(mainframe, text="Selecciona un Motivo:").grid(column=0, row=0, sticky=tk.W, pady=5)
-combo_motivo = ttk.Combobox(mainframe, values=list(motivos.keys()))
-combo_motivo.state(["readonly"])
+#combo_motivo = ttk.Combobox(mainframe, values=list(motivos.keys()))
+#combo_motivo.state(["readonly"])
+#combo_motivo.grid(column=1, row=0, sticky=(tk.W, tk.E))
+#combo_motivo.set_search_list(list(motivos.keys()))
+combo_motivo = AutocompleteEntry(mainframe, list(motivos.keys()), actualizar_temas2, width=40)
 combo_motivo.grid(column=1, row=0, sticky=(tk.W, tk.E))
-combo_motivo.bind("<<ComboboxSelected>>", actualizar_temas)
+#combo_motivo.bind("<<ComboboxSelected>>", actualizar_temas)
 
 # Etiqueta y lista desplegable para Tema
 ttk.Label(mainframe, text="Selecciona un Tema:").grid(column=0, row=1, sticky=tk.W, pady=5)
