@@ -72,6 +72,7 @@ class AutocompleteEntry(tk.Entry):
         for match in matches:
             self.listbox.insert(tk.END, match)
         self.listbox.bind("<<ListboxSelect>>", self.on_select)
+        #self.listbox.bind('<ButtonRelease-1>', self.on_select) 
         self.listbox.bind('<Return>', self.on_select)
         self.listbox.bind('<FocusOut>', lambda e: self.hide_listbox())
         self.listbox.bind('<Up>', self.navigate_listbox)
@@ -88,7 +89,6 @@ class AutocompleteEntry(tk.Entry):
         # If the click is not on the listbox or its frame, hide the listbox
         if widget not in (self.listbox, self.frame) and not str(widget).startswith(str(self.frame)):
             self.hide_listbox()
-            #self.listbox.unbind_all("<Button-1>")
 
     def focus_listbox(self, event=None):
         if self.listbox and self.listbox.size() > 0:
@@ -166,7 +166,6 @@ def generar_respuesta():
     respuesta_text.delete(1.0, tk.END)
     
     # Parse the respuesta string for placeholders (e.g., {name:type})
-    #pattern = r"\{(\w+):(\w+)(?::([^}]+))?\}"  # Matches {name:type[:options]}
     pattern = r"\{(\w+):([^}:]+)(?::([^}]+))?\}"  # Matches {name:type[:options]}
 
     # Validate placeholders
@@ -268,15 +267,20 @@ def open_month_picker(button_name):
     ttk.Button(top, text="Seleccionar", command=select_month).pack(pady=10)
 
 # Función para actualizar los temas según el motivo seleccionado
-def actualizar_temas(event):
-    motivo_seleccionado = combo_motivo.get()
-    combo_tema["values"] = list(motivos[motivo_seleccionado].keys())
-    combo_tema.current(0)  # Seleccionar el primer tema por defecto
-
 def actualizar_temas2(motivo_seleccionado):
-    #motivo_seleccionado = combo_motivo.listbox.get(combo_motivo.listbox.curselection())
-    combo_tema["values"] = list(motivos[motivo_seleccionado].keys())
-    combo_tema.current(0)  # Seleccionar el primer tema por defecto
+    print(f"Motivo seleccionado: {motivo_seleccionado}")  # Debugging line to check selected motivo
+    if motivo_seleccionado in motivos:
+        temas = list(motivos[motivo_seleccionado].keys())
+        combo_tema.completion_list = temas
+        combo_tema.delete(0, tk.END)
+        #combo_tema.show_listbox(temas)  # Opcional: mostrar sugerencias al actualizar
+        combo_tema.focus_set()
+        combo_tema.after(1, lambda: combo_tema.show_listbox(temas))  # <-- Defer showing listbox
+
+    else:
+        combo_tema.completion_list = []
+        combo_tema.delete(0, tk.END)
+        combo_tema.hide_listbox()
 
 def update_status_bar(file_path):
     # Get the current time in hours and minutes
@@ -286,7 +290,6 @@ def update_status_bar(file_path):
 
 def mostrar_acerca_de():
     messagebox.showinfo("Acerca de", "Este programa permite seleccionar motivos y temas para generar respuestas.")
-    # Puedes agregar más información aquí, como la versión, autor, etc.
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
@@ -523,18 +526,12 @@ mainframe.grid(column=0, row=0, sticky=(tk.N, tk.W, tk.E, tk.S))
 
 # Etiqueta y lista desplegable para Motivo
 ttk.Label(mainframe, text="Selecciona un Motivo:").grid(column=0, row=0, sticky=tk.W, pady=5)
-#combo_motivo = ttk.Combobox(mainframe, values=list(motivos.keys()))
-#combo_motivo.state(["readonly"])
-#combo_motivo.grid(column=1, row=0, sticky=(tk.W, tk.E))
-#combo_motivo.set_search_list(list(motivos.keys()))
 combo_motivo = AutocompleteEntry(mainframe, list(motivos.keys()), actualizar_temas2, width=40)
 combo_motivo.grid(column=1, row=0, sticky=(tk.W, tk.E))
-#combo_motivo.bind("<<ComboboxSelected>>", actualizar_temas)
 
 # Etiqueta y lista desplegable para Tema
 ttk.Label(mainframe, text="Selecciona un Tema:").grid(column=0, row=1, sticky=tk.W, pady=5)
-combo_tema = ttk.Combobox(mainframe)
-combo_tema.state(["readonly"])
+combo_tema = AutocompleteEntry(mainframe, [], lambda e: generar_respuesta(), width=40)
 combo_tema.grid(column=1, row=1, sticky=(tk.W, tk.E))
 
 # Botón para generar respuesta
@@ -546,8 +543,6 @@ respuesta_label.grid(column=0, row=3, columnspan=2, pady=5)
 
 # campo de texto para mostrar la respuesta
 respuesta_text = tk.Text(mainframe, wrap=tk.WORD, height=30, width=150)
-# Hacer el campo de texto de solo lectura
-# respuesta_text['state'] = 'disabled'
 respuesta_text.grid(column=0, row=4, columnspan=2, pady=5, sticky=(tk.N))
 
 # Botón para copiar la respuesta al portapapeles
@@ -568,7 +563,7 @@ mainframe.columnconfigure(1, weight=1)
 mainframe.rowconfigure(4, weight=1)
 
 combo_motivo.focus()
-root.bind("<Return>", lambda e: generar_respuesta())
+#root.bind("<Return>", lambda e: generar_respuesta())
 
 # Ejecutar la aplicación
 try:
